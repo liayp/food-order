@@ -1,36 +1,35 @@
-const midtransClient = require('midtrans-client');
-const { Order } = require('@/models/Order');
+import { Order } from "@/models/Order";
+import mongoose from "mongoose";
 
 export async function POST(req) {
+  mongoose.connect(process.env.MONGO_URL);
+
   try {
-    const requestBody = await req.json();
-    const orderId = requestBody?.orderId;
-    const paymentStatus = requestBody?.payment_status;
+    const body = await req.json();
+    const orderId = body?.order_id;
+    const transactionStatus = body?.transaction_status;
 
-    if (!orderId || !paymentStatus) {
-      console.error('Invalid payload from Midtrans');
-      return Response.json('Invalid payload from Midtrans', { status: 400 });
+    if (!orderId || !transactionStatus) {
+      console.error("Invalid payload from Midtrans");
+      return new Response(JSON.stringify({ error: "Invalid payload" }), { status: 400 });
     }
 
-    // Handle the payment status from Midtrans
-    if (paymentStatus === 'pending') {
-      console.log('Payment is pending');
-      // Handle pending status if needed
-    } else if (paymentStatus === 'settlement') {
-      console.log('Payment is settled');
-      // Handle settled status, for example, mark the order as paid
-      await Order.updateOne({ _id: orderId }, { paid: true });
-    } else if (paymentStatus === 'deny') {
-      console.log('Payment is denied');
-      // Handle denied status if needed
+    if (transactionStatus === "pending") {
+      console.log("Payment is pending");
+      // Bisa update status ke pending kalau perlu
+    } else if (transactionStatus === "settlement") {
+      console.log("Payment is settled");
+      await Order.updateOne({ orderId: orderId }, { paid: true });
+    } else if (transactionStatus === "deny") {
+      console.log("Payment is denied");
+      // Update status jadi denied kalo kamu pake status custom
     } else {
-      console.log('Unknown payment status');
-      // Handle other payment statuses if needed
+      console.log("Unhandled transaction status:", transactionStatus);
     }
 
-    return Response.json('ok', { status: 200 });
+    return new Response(JSON.stringify({ message: "ok" }), { status: 200 });
   } catch (error) {
-    console.error('Midtrans webhook error', error);
-    return Response.json('Internal Server Error', { status: 500 });
+    console.error("Webhook error:", error);
+    return new Response(JSON.stringify({ error: "Internal Server Error" }), { status: 500 });
   }
 }

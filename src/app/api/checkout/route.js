@@ -3,15 +3,16 @@ import { MenuItem } from "@/models/MenuItem";
 import { Order } from "@/models/Order";
 import mongoose from "mongoose";
 import { getServerSession } from "next-auth";
-const midtransClient = require('midtrans-client');
+const midtransClient = require("midtrans-client");
 
 export async function POST(req) {
   mongoose.connect(process.env.MONGO_URL);
-
   const { cartProducts, address } = await req.json();
+
   const session = await getServerSession(authOptions);
   const userEmail = session?.user?.email;
 
+  // Buat order di database (tanpa orderId dulu)
   const orderDoc = await Order.create({
     userEmail,
     ...address,
@@ -19,33 +20,36 @@ export async function POST(req) {
     paid: false,
   });
 
+  // Update orderId dengan _id.toString()
+  await Order.updateOne(
+    { _id: orderDoc._id },
+    { orderId: orderDoc._id.toString() }
+  );
+
+  // Setup Midtrans Snap
   const snap = new midtransClient.Snap({
     isProduction: false,
     serverKey: process.env.MIDTRANS_SERVER_KEY,
     clientKey: process.env.MIDTRANS_CLIENT_KEY,
   });
 
+  // Siapin item detail untuk Midtrans
   const midtransItems = [];
   for (const cartProduct of cartProducts) {
     const productInfo = await MenuItem.findById(cartProduct._id);
     let productPrice = productInfo.basePrice;
 
-    // Tambahkan harga bahan tambahan ekstra
-    console.log(cartProduct)
     for (const extra of cartProduct.extras) {
       productPrice += extra.price;
     }
 
-    // Tambahkan harga variasi ukuran
     if (cartProduct.size) {
       productPrice += cartProduct.size.price;
     }
 
-    const productName = cartProduct.name;
-
     midtransItems.push({
       id: cartProduct._id.toString(),
-      name: productName,
+      name: cartProduct.name,
       price: productPrice,
       quantity: 1,
     });
@@ -56,10 +60,6 @@ export async function POST(req) {
     gross_amount: calculateTotalAmount(midtransItems),
   };
 
-  const creditCardOptions = {
-    secure: true,
-  };
-
   const customerDetails = {
     email: userEmail,
   };
@@ -67,7 +67,7 @@ export async function POST(req) {
   const midtransParams = {
     transaction_details: transactionDetails,
     item_details: midtransItems,
-    credit_card: creditCardOptions,
+    credit_card: { secure: true },
     customer_details: customerDetails,
     callbacks: {
       finish: process.env.NEXTAUTH_URL + 'orders/' + orderDoc._id.toString() + '?clear-cart=1',
@@ -76,16 +76,14 @@ export async function POST(req) {
   };
 
   try {
-    const midtransTransaction = await snap.createTransaction(midtransParams);
-    return Response.json(midtransTransaction.redirect_url);
+    const transaction = await snap.createTransaction(midtransParams);
+    return Response.json(transaction.redirect_url);
   } catch (error) {
     console.error("Midtrans error:", error);
-    return Response.json({ error: "Failed to create Midtrans transaction" });
+    return Response.json({ error: "Failed to create transaction" }, { status: 500 });
   }
 }
 
 function calculateTotalAmount(items) {
   return items.reduce((total, item) => total + item.price * item.quantity, 0);
 }
-
-

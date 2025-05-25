@@ -9,6 +9,7 @@ const OrderSchema = new Schema({
   country: String,
   cartProducts: Object,
   paid: {type: Boolean, default: false},
+  orderId: { type: String, unique: true },
 }, {timestamps: true});
 
 export const Order = models?.Order || model('Order', OrderSchema);
