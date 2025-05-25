@@ -13,10 +13,10 @@ export async function GET(req) {
 
   // Buat range waktu dari jam 00:00:00 sampai 23:59:59 UTC
   const start = new Date(date);
-  start.setUTCHours(0, 0, 0, 0);
+  start.setHours(0, 0, 0, 0);
 
   const end = new Date(date);
-  end.setUTCHours(23, 59, 59, 999);
+  end.setHours(23, 59, 59, 999);
 
   // Log (debugging opsional)
   console.log("start:", start.toISOString());
