@@ -22,7 +22,7 @@ export default function CartPage() {
 
   useEffect(() => {
     const snapScript = "https://app.sandbox.midtrans.com/snap/snap.js";
-    const clientKey = process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY; // Pastikan ini sudah di .env.local dan di prefix NEXT_PUBLIC_ supaya bisa di client
+    const clientKey = process.env.MIDTRANS_CLIENT_KEY; 
 
     const script = document.createElement("script");
     script.src = snapScript;
@@ -63,10 +63,10 @@ export default function CartPage() {
       if (!res.ok) throw new Error("Checkout failed");
       const data = await res.json();
 
-      if (data?.redirect_url) {
-        window.location.href = data.redirect_url;
-      } else if (window.snap && data?.token) {
+      if (window.snap && data?.token) {
         window.snap.pay(data.token);
+      } else if (data?.redirect_url) {
+        window.location.href = data.redirect_url;
       }
     });
 

@@ -77,7 +77,11 @@ export async function POST(req) {
 
   try {
     const midtransTransaction = await snap.createTransaction(midtransParams);
-    return Response.json(midtransTransaction.redirect_url);
+    return Response.json({
+      redirect_url: midtransTransaction.redirect_url,
+      token: midtransTransaction.token,
+    });
+
   } catch (error) {
     console.error("Midtrans error:", error);
     return Response.json({ error: "Failed to create Midtrans transaction" });
