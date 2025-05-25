@@ -7,14 +7,15 @@ const midtransClient = require('midtrans-client');
 
 export async function POST(req) {
   await mongoose.connect(process.env.MONGO_URL);
+
   const { cartProducts, address } = await req.json();
   const session = await getServerSession(authOptions);
   const userEmail = session?.user?.email;
 
-  // generate orderId yang unik, ini yang akan dikirim ke Midtrans dan disimpan di DB
+  // Generate 1 orderId (ObjectId) untuk dipakai di DB dan Midtrans
   const newOrderId = new mongoose.Types.ObjectId().toString();
 
-  // Simpan order ke DB dulu, status paid = false
+  // Simpan order ke database dengan orderId yang sama
   const orderDoc = await Order.create({
     userEmail,
     ...address,
@@ -24,7 +25,7 @@ export async function POST(req) {
   });
 
   const snap = new midtransClient.Snap({
-    isProduction: false, // atau true kalo udah live
+    isProduction: false,
     serverKey: process.env.MIDTRANS_SERVER_KEY,
   });
 
@@ -32,13 +33,12 @@ export async function POST(req) {
 
   for (const cartProduct of cartProducts) {
     const productInfo = await MenuItem.findById(cartProduct._id);
-    let productPrice = productInfo?.basePrice || 0;
+    let productPrice = productInfo.basePrice;
 
-    if (cartProduct.extras?.length) {
-      for (const extra of cartProduct.extras) {
-        productPrice += extra.price;
-      }
+    for (const extra of cartProduct.extras) {
+      productPrice += extra.price;
     }
+
     if (cartProduct.size) {
       productPrice += cartProduct.size.price;
     }
@@ -51,14 +51,9 @@ export async function POST(req) {
     });
   }
 
-  // Fungsi untuk hitung total harga
-  function calculateTotalAmount(items) {
-    return items.reduce((total, item) => total + item.price * item.quantity, 0);
-  }
-
   const midtransParams = {
     transaction_details: {
-      order_id: newOrderId,
+      order_id: newOrderId,           // Pake orderId yang sama
       gross_amount: calculateTotalAmount(midtransItems),
     },
     item_details: midtransItems,
@@ -72,12 +67,16 @@ export async function POST(req) {
 
   try {
     const midtransTransaction = await snap.createTransaction(midtransParams);
-    return new Response(JSON.stringify({
+    return Response.json({
       redirect_url: midtransTransaction.redirect_url,
       token: midtransTransaction.token,
-    }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    });
   } catch (error) {
     console.error("Midtrans error:", error);
-    return new Response(JSON.stringify({ error: "Failed to create Midtrans transaction" }), { status: 500 });
+    return Response.json({ error: "Failed to create Midtrans transaction" }, { status: 500 });
   }
+}
+
+function calculateTotalAmount(items) {
+  return items.reduce((total, item) => total + item.price * item.quantity, 0);
 }
