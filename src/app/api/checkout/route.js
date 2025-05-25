@@ -87,3 +87,8 @@ export async function POST(req) {
 function calculateTotalAmount(items) {
   return items.reduce((total, item) => total + item.price * item.quantity, 0);
 }
+
+const redirectUrl = await res.json();
+if (redirectUrl) {
+  window.location.href = redirectUrl; // 🔁 redirect ke Midtrans
+}
