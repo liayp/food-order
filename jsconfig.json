@@ -1,0 +1,8 @@
+{
+  "compilerOptions": {
+    "paths": {
+      "@/*": ["./src/*"],
+      "@/mt/*": ["./midtrans-nodejs-client/*"]
+    }
+  }
+}
