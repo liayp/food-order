@@ -18,11 +18,9 @@ export default function Home() {
           <div className="footer-flex-box flex flex-wrap">
             <div className="w-full md:w-1/3 mb-6 md:mb-0 text-left">
               <h2 className="text-lg font-serif font-extrabold mb-4">Our Location</h2>
-              <p className="text-slate-800">Boroko Utara</p>
-              <p className="text-slate-800">Jalan Trans Sulawesi</p>
-              <p className="text-slate-800">Kaidipang </p>
-              <p className="text-slate-800">North Bolaang Mongondow Regency</p>
-              <p className="text-slate-800">North Sulawesi 95765</p>
+              <p className="text-slate-800">Moutong, Kec. Tilongkabila</p>
+              <p className="text-slate-800">Kabupaten Bone Bolango</p>
+              <p className="text-slate-800">Gorontalo 96119</p>
             </div>
             <div className="w-full md:w-1/3 mb-6 md:mb-0 text-center">
               <h2 className="text-lg font-serif font-extrabold mb-4">Connect With Us</h2>

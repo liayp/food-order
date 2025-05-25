@@ -11,18 +11,13 @@ export async function GET(req) {
 
   if (!date) return Response.json({ error: 'Missing date' });
 
-  // Buat range waktu dari jam 00:00:00 sampai 23:59:59 UTC
+  // Buat range waktu dari jam 00:00:00 sampai 23:59:59 
   const start = new Date(date);
   start.setHours(0, 0, 0, 0);
 
   const end = new Date(date);
   end.setHours(23, 59, 59, 999);
-
-  // Log (debugging opsional)
-  console.log("start:", start.toISOString());
-  console.log("end:", end.toISOString());
-
-  // Ambil order yang sudah dibayar pada tanggal tersebut
+  
   const orders = await Order.find({
     paid: true,
     createdAt: { $gte: start, $lte: end },
@@ -31,7 +26,6 @@ export async function GET(req) {
   let totalSales = 0;
   const productCount = {};
 
-  // Hitung jumlah produk dan total penjualan
   orders.forEach(order => {
     (order.cartProducts || []).forEach(prod => {
       const qty = prod.qty || 1;
@@ -43,7 +37,7 @@ export async function GET(req) {
     });
   });
 
-  // Buat data produk
+  
   const productStats = Object.entries(productCount).map(([name, quantity]) => {
     const revenue = orders.reduce((sum, order) => {
       const prod = (order.cartProducts || []).find(p => p.name === name);
