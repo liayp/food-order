@@ -13,11 +13,10 @@ export default function EditableImage({ link, setLink }) {
         method: 'POST',
         body: data,
       }).then(response => {
-        console.log(response);
         if (response.ok) {
-          return response.json().then(link => {
-            setLink(link);
-          })
+          return response.json().then(data => {
+            setLink(data.url); // ⬅️ pakai `data.url` sesuai response dari Blob
+          });
         }
         throw new Error('Something went wrong');
       });

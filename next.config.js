@@ -12,6 +12,10 @@ const nextConfig = {
         port: '3000',
         pathname: '/upload/**',
       },
+      {
+        protocol: 'https',
+        hostname: 'ipdcfpaf18qp0rmr.public.blob.vercel-storage.com',
+      },
     ]
   }
 }

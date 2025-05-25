@@ -3,82 +3,55 @@ import { Order } from "@/models/Order";
 import mongoose from "mongoose";
 import { getServerSession } from "next-auth";
 
-mongoose.set("strictQuery", false);
-
 export async function GET(req) {
-  try {
-    if (!mongoose.connection.readyState) {
-      await mongoose.connect(process.env.MONGO_URL);
-    }
+  mongoose.connect(process.env.MONGO_URL);
 
-    const session = await getServerSession(authOptions);
-    const userEmail = session?.user?.email;
-    const admin = await isAdmin();
+  const session = await getServerSession(authOptions);
+  const userEmail = session?.user?.email;
+  const admin = await isAdmin();
 
-    const url = new URL(req.url);
-    const _id = url.searchParams.get("_id");
+  const url = new URL(req.url);
+  const _id = url.searchParams.get('_id');
 
-    if (_id) {
-      const order = await Order.findById(_id);
-      return new Response(JSON.stringify(order), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      });
-    }
+  if (_id) {
+    // Mengambil data order berdasarkan _id
+    const order = await Order.findById(_id);
 
-    if (admin) {
-      const orders = await Order.find();
-      return new Response(JSON.stringify(orders), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      });
-    }
+    // Memberikan respons dengan data order
+    return Response.json(order);
+  }
 
-    if (userEmail) {
-      const orders = await Order.find({ userEmail });
-      return new Response(JSON.stringify(orders), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      });
-    }
+  if (admin) {
+    // Jika admin, kembalikan semua data order
+    const orders = await Order.find();
+    return Response.json(orders);
+  }
 
-    return new Response("Unauthorized", { status: 401 });
-  } catch (error) {
-    console.error("GET orders error:", error);
-    return new Response("Internal Server Error", { status: 500 });
+  if (userEmail) {
+    // Jika bukan admin, kembalikan data order berdasarkan userEmail
+    const orders = await Order.find({ userEmail });
+    return Response.json(orders);
   }
 }
 
 export async function POST(req) {
+  mongoose.connect(process.env.MONGO_URL);
+
+  const { orderId, paymentStatus } = await req.json();
+
   try {
-    if (!mongoose.connection.readyState) {
-      await mongoose.connect(process.env.MONGO_URL);
-    }
-
-    const { orderId, paymentStatus } = await req.json();
-
-    if (!orderId || paymentStatus === undefined) {
-      return new Response(
-        JSON.stringify({ error: "orderId or paymentStatus missing" }),
-        { status: 400, headers: { "Content-Type": "application/json" } }
-      );
-    }
-
+    // Mengupdate status pembayaran (paid) berdasarkan orderId
     const updatedOrder = await Order.findByIdAndUpdate(
       orderId,
       { paid: paymentStatus },
-      { new: true }
+      { new: true } // Mengembalikan dokumen yang sudah diupdate
     );
 
-    return new Response(JSON.stringify(updatedOrder), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    });
+    // Jika berhasil diupdate, kembalikan respons dengan data order yang sudah diupdate
+    return Response.json(updatedOrder);
   } catch (error) {
-    console.error("POST update order error:", error);
-    return new Response(JSON.stringify({ error: "Failed to update payment status" }), {
-      status: 500,
-      headers: { "Content-Type": "application/json" },
-    });
+    // Jika terjadi kesalahan, kembalikan respons dengan pesan error
+    console.error("Error updating payment status:", error);
+    return Response.json({ error: "Failed to update payment status" });
   }
 }

@@ -1,59 +1,36 @@
-import { Order } from "@/models/Order";
-import mongoose from "mongoose";
-
-mongoose.set("strictQuery", false);
+const midtransClient = require('midtrans-client');
+const { Order } = require('@/models/Order');
 
 export async function POST(req) {
   try {
-    const contentType = req.headers.get("content-type") || "";
+    const requestBody = await req.json();
+    const orderId = requestBody?.orderId;
+    const paymentStatus = requestBody?.payment_status;
 
-    let body = {};
-    if (contentType.includes("application/json")) {
-      body = await req.json();
+    if (!orderId || !paymentStatus) {
+      console.error('Invalid payload from Midtrans');
+      return Response.json('Invalid payload from Midtrans', { status: 400 });
+    }
+
+    // Handle the payment status from Midtrans
+    if (paymentStatus === 'pending') {
+      console.log('Payment is pending');
+      // Handle pending status if needed
+    } else if (paymentStatus === 'settlement') {
+      console.log('Payment is settled');
+      // Handle settled status, for example, mark the order as paid
+      await Order.updateOne({ _id: orderId }, { paid: true });
+    } else if (paymentStatus === 'deny') {
+      console.log('Payment is denied');
+      // Handle denied status if needed
     } else {
-      const text = await req.text();
-      try {
-        body = JSON.parse(text);
-      } catch {
-        console.warn("⚠️ Webhook body is not JSON:", text);
-        return new Response("Unsupported format", { status: 400 });
-      }
+      console.log('Unknown payment status');
+      // Handle other payment statuses if needed
     }
 
-    console.log("🔥 Webhook Payload:", body);
-
-    const orderId = body.order_id || body.transaction_id || body.orderId;
-    const transactionStatus = body.transaction_status;
-
-    if (!orderId || !transactionStatus) {
-      console.error("Invalid payload from Midtrans:", body);
-      return new Response("Invalid payload", { status: 400 });
-    }
-
-    if (!mongoose.connection.readyState) {
-      await mongoose.connect(process.env.MONGO_URL);
-    }
-
-    console.log(`Webhook received: orderId=${orderId}, status=${transactionStatus}`);
-
-    if (transactionStatus === "settlement") {
-      const updatedOrder = await Order.findByIdAndUpdate(
-        orderId,
-        { paid: true },
-        { new: true }
-      );
-
-      if (updatedOrder) {
-        console.log("✅ Order payment status updated:", updatedOrder);
-      } else {
-        console.warn("⚠️ Order not found for id:", orderId);
-      }
-    }
-
-    return new Response("OK", { status: 200 });
+    return Response.json('ok', { status: 200 });
   } catch (error) {
-    console.error("❌ Midtrans webhook error:", error);
-    return new Response("Internal Server Error", { status: 500 });
+    console.error('Midtrans webhook error', error);
+    return Response.json('Internal Server Error', { status: 500 });
   }
 }
-
