@@ -1,5 +1,6 @@
 'use client';
 
+import { useSession } from "next-auth/react";
 import { CartContext } from "@/components/AppContext";
 import MenuItemTile from "@/components/menu/MenuItemTile";
 import Image from "next/image";
@@ -11,6 +12,7 @@ export default function MenuItem(menuItem) {
     sizes = [], extraIngredientPrices = [],
   } = menuItem;
 
+  const { data: session } = useSession();
   const [selectedSize, setSelectedSize] = useState(sizes[0] || null);
   const [selectedExtras, setSelectedExtras] = useState([]);
   const [showPopup, setShowPopup] = useState(false);
@@ -19,14 +21,21 @@ export default function MenuItem(menuItem) {
   const hasOptions = sizes.length > 0 || extraIngredientPrices.length > 0;
 
   async function handleAddToCartButtonClick() {
+    if (!session) {
+      alert("Kamu harus login dulu untuk menambahkan ke keranjang!");
+      return;
+    }
+
     if (hasOptions && !showPopup) {
       setShowPopup(true);
       return;
     }
+
     addToCart(menuItem, selectedSize, selectedExtras);
     await new Promise(resolve => setTimeout(resolve, 1000));
     setShowPopup(false);
   }
+
 
   function handleExtraThingClick(ev, extraThing) {
     if (ev.target.checked) {
