@@ -24,6 +24,7 @@ export default function Home() {
             </div>
             <div className="w-full md:w-1/3 mb-6 md:mb-0 text-center">
               <h2 className="text-lg font-serif font-extrabold mb-4">Connect With Us</h2>
+              <p className="text-slate-800">+62 813-4130-3582</p>
               <div className="flex space-x-4">
                 <a href="#" className="text-white hover:text-gray-400 transition duration-300">
 
