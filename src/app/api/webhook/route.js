@@ -1,36 +1,34 @@
-const midtransClient = require('midtrans-client');
-const { Order } = require('@/models/Order');
+import { Order } from "@/models/Order";
+import mongoose from "mongoose";
 
 export async function POST(req) {
   try {
-    const requestBody = await req.json();
-    const orderId = requestBody?.orderId;
-    const paymentStatus = requestBody?.payment_status;
+    const payload = await req.json();
+    const orderId = payload?.order_id;
+    const paymentStatus = payload?.transaction_status;
 
     if (!orderId || !paymentStatus) {
       console.error('Invalid payload from Midtrans');
-      return Response.json('Invalid payload from Midtrans', { status: 400 });
+      return new Response('Invalid payload from Midtrans', { status: 400 });
     }
 
-    // Handle the payment status from Midtrans
-    if (paymentStatus === 'pending') {
-      console.log('Payment is pending');
-      // Handle pending status if needed
-    } else if (paymentStatus === 'settlement') {
-      console.log('Payment is settled');
-      // Handle settled status, for example, mark the order as paid
+    await mongoose.connect(process.env.MONGO_URL);
+
+    if (paymentStatus === 'settlement') {
+      // Update paid jadi true kalo payment sukses
       await Order.updateOne({ orderId }, { paid: true });
+      console.log(`Order ${orderId} marked as paid`);
+    } else if (paymentStatus === 'pending') {
+      console.log(`Order ${orderId} payment is pending`);
     } else if (paymentStatus === 'deny') {
-      console.log('Payment is denied');
-      // Handle denied status if needed
+      console.log(`Order ${orderId} payment denied`);
     } else {
-      console.log('Unknown payment status');
-      // Handle other payment statuses if needed
+      console.log(`Order ${orderId} payment status: ${paymentStatus}`);
     }
 
-    return Response.json('ok', { status: 200 });
+    return new Response('OK', { status: 200 });
   } catch (error) {
-    console.error('Midtrans webhook error', error);
-    return Response.json('Internal Server Error', { status: 500 });
+    console.error('Midtrans webhook error:', error);
+    return new Response('Internal Server Error', { status: 500 });
   }
 }

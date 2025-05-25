@@ -6,23 +6,25 @@ import { getServerSession } from "next-auth";
 const midtransClient = require('midtrans-client');
 
 export async function POST(req) {
-  mongoose.connect(process.env.MONGO_URL);
+  await mongoose.connect(process.env.MONGO_URL);
   const { cartProducts, address } = await req.json();
   const session = await getServerSession(authOptions);
   const userEmail = session?.user?.email;
 
+  // generate orderId yang unik, ini yang akan dikirim ke Midtrans dan disimpan di DB
   const newOrderId = new mongoose.Types.ObjectId().toString();
 
+  // Simpan order ke DB dulu, status paid = false
   const orderDoc = await Order.create({
     userEmail,
     ...address,
     cartProducts,
-    orderId: new mongoose.Types.ObjectId().toString(),
+    orderId: newOrderId,
     paid: false,
   });
 
   const snap = new midtransClient.Snap({
-    isProduction: false,
+    isProduction: false, // atau true kalo udah live
     serverKey: process.env.MIDTRANS_SERVER_KEY,
   });
 
@@ -30,12 +32,13 @@ export async function POST(req) {
 
   for (const cartProduct of cartProducts) {
     const productInfo = await MenuItem.findById(cartProduct._id);
-    let productPrice = productInfo.basePrice;
+    let productPrice = productInfo?.basePrice || 0;
 
-    for (const extra of cartProduct.extras) {
-      productPrice += extra.price;
+    if (cartProduct.extras?.length) {
+      for (const extra of cartProduct.extras) {
+        productPrice += extra.price;
+      }
     }
-
     if (cartProduct.size) {
       productPrice += cartProduct.size.price;
     }
@@ -46,6 +49,11 @@ export async function POST(req) {
       price: productPrice,
       quantity: 1,
     });
+  }
+
+  // Fungsi untuk hitung total harga
+  function calculateTotalAmount(items) {
+    return items.reduce((total, item) => total + item.price * item.quantity, 0);
   }
 
   const midtransParams = {
@@ -64,18 +72,12 @@ export async function POST(req) {
 
   try {
     const midtransTransaction = await snap.createTransaction(midtransParams);
-    return Response.json({
+    return new Response(JSON.stringify({
       redirect_url: midtransTransaction.redirect_url,
       token: midtransTransaction.token,
-    });
+    }), { status: 200, headers: { 'Content-Type': 'application/json' } });
   } catch (error) {
     console.error("Midtrans error:", error);
-    return Response.json({ error: "Failed to create Midtrans transaction" }, { status: 500 });
+    return new Response(JSON.stringify({ error: "Failed to create Midtrans transaction" }), { status: 500 });
   }
 }
-
-function calculateTotalAmount(items) {
-  return items.reduce((total, item) => total + item.price * item.quantity, 0);
-}
-
-
