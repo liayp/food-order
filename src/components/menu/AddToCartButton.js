@@ -1,6 +1,7 @@
 'use client';
 
 import FlyingButton from 'react-flying-item';
+import React, { useRef } from 'react';
 
 export default function AddToCartButton({
     hasSizesOrExtras, onClick, basePrice, image
