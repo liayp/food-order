@@ -47,7 +47,7 @@ export default function Header() {
     <header className="">
       <div className="flex items-center md:hidden justify-between font-extralight">
         <Link className="text-primary font-bold text-2xl font-agbalumo" href={'/'}>
-          Coconut Beach
+         RM. Aswa
         </Link>
         <div className="flex gap-8 items-center">
           <Link href={'/cart'} className="relative">
@@ -80,7 +80,7 @@ export default function Header() {
           <div className="flex justify-start">
             <nav className="flex relative items-center gap-8 font-normal">
               <Link className="text-primary font-bold font-agbalumo text-2xl" href={'/'}>
-                Coconut Beach
+               RM. Aswa
               </Link>
               <Link href={'/'}>Home</Link>
               <Link href={'/#menu'}>Menu</Link>
