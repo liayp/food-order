@@ -19,7 +19,7 @@ export async function POST(req) {
     } else if (paymentStatus === 'settlement') {
       console.log('Payment is settled');
       // Handle settled status, for example, mark the order as paid
-      await Order.updateOne({ _id: orderId }, { paid: true });
+      await Order.updateOne({ orderId }, { paid: true });
     } else if (paymentStatus === 'deny') {
       console.log('Payment is denied');
       // Handle denied status if needed
